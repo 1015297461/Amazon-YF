@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(pnpm run:*)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(/Users/dihting/Library/pnpm/pnpm run:*)",
+      "Read(//Users/dihting/Library/**)",
+      "Read(//Users/dihting/.local/share/**)"
+    ]
+  }
+}

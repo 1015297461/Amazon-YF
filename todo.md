@@ -1,0 +1,53 @@
+# Project TODO
+
+- [x] Database schema for scrape tasks and product data
+- [x] Backend scraping API - fetch Amazon product pages via server-side HTTP
+- [x] Parse product title from Amazon listing page
+- [x] Parse bullet points (five points) from listing page
+- [x] Parse product description from listing page
+- [x] Parse product images from listing page
+- [x] Parse product specifications/details from listing page
+- [x] Parse price, brand, rating, availability
+- [x] Support multiple Amazon marketplace sites
+- [x] Batch ASIN input support
+- [x] Excel export functionality (CSV with BOM for Excel)
+- [x] Frontend - ASIN input form with marketplace selector
+- [x] Frontend - Progress indicator during scraping
+- [x] Frontend - Results table display
+- [x] Frontend - Image preview in table
+- [x] Frontend - Export to Excel button
+- [x] Design - Professional dark theme UI
+- [x] Vitest tests for scraping logic (12 tests passing)
+- [x] 优化反爬虫策略 - 真实浏览器指纹模拟（10个完整浏览器Profile轮换）
+- [x] 优化反爬虫策略 - 请求间隔随机化与智能延迟（含偶发长停顿）
+- [x] 优化反爬虫策略 - Cookie/Session管理（首页预热+Cookie持久化）
+- [x] 优化反爬虫策略 - Accept-Language/Referer/sec-ch-ua等请求头完善
+- [x] 优化反爬虫策略 - 智能重试机制（CAPTCHA检测+指纹轮换+指数退避）
+- [x] 优化反爬虫策略 - 请求压缩与TLS指纹优化
+- [x] 前端 - 重试失败按钮和刷新会话按钮
+- [x] 改进错误提示 - 区分ASIN无效/CAPTCHA/页面不存在等情况
+- [x] 移除ASIN数量限制（当前限制20个），支持无限量输入
+- [x] 后台分批处理ASIN（每批5个），展示实时分批进度
+- [x] 采集结果区域固定高度，加入垂直滚动条
+- [x] 采集结果分页展示，支持每页30/60/100条切换
+- [x] 清理产品规格/评分等字段中混入的JavaScript代码和空白字符
+- [x] 输入ASIN区域固定高度，加入垂直滚动条
+- [x] 采集历史功能（数据库存储+历史页面）
+- [x] 后端解析Best Sellers Rank - 大类/大类排名/小类/小类排名
+- [x] 后端解析分类路径（breadcrumb）
+- [x] 后端解析Customer Reviews（Customers say / Reviews with images / Select to learn more）
+- [x] 前端结果表格新增：分类路径（截断展示）、大类、小类、大类排名、小类排名
+- [x] 详情页新增Customer Reviews模块（含前10张图片）
+- [x] 导出文件新增：分类路径、大类、小类、大类排名、小类排名、Customers say
+- [x] 产品详情页图片高清化（替换缩略图URL为原图URL）
+- [x] 产品详情页图片灯笜弹窗（左右切换+ESC关闭+循环浏览）
+- [x] 排查并修复Customer Reviews数据为空的问题（增强选择器覆盖更多页面结构）
+- [x] 优化采集速度（每批3个并发处理，批内错开800ms启动，批间2.5s间隔）
+- [x] 修复重试流程：点击无反应+成功后列表不更新
+- [x] 优化BSR解析：部分ASIN大类/小类/排名数据缺失
+- [x] 修复图片灯箱：关闭图片后详情页也关闭（应保留详情页）
+- [x] 排查Customer Reviews为空：确认数据来源和解析逻辑
+- [x] 结果列表图片优化：缩略图放大+鼠标悬浮放大展示
+- [x] 结果列表标题优化：鼠标悬浮展示完整标题
+- [x] 修复采集历史保存：登录后采集数据但历史页无数据（应用已正常保存，需登录查看）
+- [x] 增加结果列表宽度：当前宽度不够
