@@ -9,7 +9,6 @@ import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import ProductDetailDialog, { type ProductData } from "@/components/ProductDetailDialog";
 import { trpc } from "@/lib/trpc";
-import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { useState, useMemo, useCallback, useRef } from "react";
 import { Link, useLocation } from "wouter";
@@ -41,7 +40,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-const BATCH_SIZE = 20;
+const BATCH_SIZE = 3;
 const PAGE_SIZE_OPTIONS = [30, 60, 100] as const;
 type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 
@@ -326,7 +325,7 @@ export default function Home() {
       <main className="container py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Panel - Input */}
-          <div className="lg:col-span-4 space-y-5">
+          <div className="lg:col-span-3 space-y-5">
             {/* Marketplace Selector */}
             <Card className="bg-card border-border/50">
               <CardHeader className="pb-3">
@@ -484,7 +483,7 @@ export default function Home() {
           </div>
 
           {/* Right Panel - Results */}
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-9">
             <Card className="bg-card border-border/50 flex flex-col" style={{ height: "calc(100vh - 120px)", minHeight: "600px", width: "100%" }}>
               <CardHeader className="pb-3 shrink-0">
                 <div className="flex items-center justify-between flex-wrap gap-2">
@@ -645,7 +644,7 @@ export default function Home() {
                                         <img
                                           src={product.mainImage}
                                           alt=""
-                                          className="w-12 h-12 object-contain rounded bg-white p-0.5 cursor-pointer hover:scale-110 transition-transform"
+                                          className="w-16 h-16 object-contain rounded bg-white p-0.5 cursor-pointer hover:scale-110 transition-transform"
                                         />
                                       </TooltipTrigger>
                                       <TooltipContent className="p-0 border-0 bg-transparent">
@@ -657,7 +656,7 @@ export default function Home() {
                                       </TooltipContent>
                                     </Tooltip>
                                   ) : (
-                                    <div className="w-12 h-12 rounded bg-muted/30 flex items-center justify-center">
+                                    <div className="w-16 h-16 rounded bg-muted/30 flex items-center justify-center">
                                       <ImageIcon className="w-5 h-5 text-muted-foreground/30" />
                                     </div>
                                   )}

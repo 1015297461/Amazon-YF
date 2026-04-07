@@ -33,7 +33,12 @@ export const appRouter = router({
         password: z.string().min(1, "密码不能为空"),
       }))
       .mutation(async ({ ctx, input }) => {
-        const user = await getUserByUsername(input.username);
+        let user;
+        try {
+          user = await getUserByUsername(input.username);
+        } catch {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "登录服务暂时不可用，请稍后重试" });
+        }
         if (!user || !user.passwordHash) {
           throw new TRPCError({ code: "UNAUTHORIZED", message: "用户名或密码错误" });
         }

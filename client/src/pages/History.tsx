@@ -223,7 +223,7 @@ export default function History() {
       <main className="container py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left: Task list */}
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-3">
             <Card className="bg-card border-border/50 flex flex-col" style={{ height: "calc(100vh - 120px)", minHeight: "500px" }}>
               <CardHeader className="pb-3 shrink-0">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -330,7 +330,7 @@ export default function History() {
           </div>
 
           {/* Right: Products for selected task */}
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-9">
             <Card className="bg-card border-border/50 flex flex-col" style={{ height: "calc(100vh - 120px)", minHeight: "500px" }}>
               <CardHeader className="pb-3 shrink-0">
                 <div className="flex items-center justify-between flex-wrap gap-2">
@@ -402,9 +402,9 @@ export default function History() {
                                 <td className="px-3 py-3 text-muted-foreground text-xs">{globalIndex + 1}</td>
                                 <td className="px-3 py-3">
                                   {p.mainImage ? (
-                                    <img src={p.mainImage} alt="" className="w-12 h-12 object-contain rounded bg-white p-0.5" />
+                                    <img src={p.mainImage} alt="" className="w-16 h-16 object-contain rounded bg-white p-0.5" />
                                   ) : (
-                                    <div className="w-12 h-12 rounded bg-muted/30 flex items-center justify-center">
+                                    <div className="w-16 h-16 rounded bg-muted/30 flex items-center justify-center">
                                       <ImageIcon className="w-5 h-5 text-muted-foreground/30" />
                                     </div>
                                   )}

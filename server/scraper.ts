@@ -184,8 +184,8 @@ interface SessionState {
 // BATCH_SIZE=3 ASINs × 2 requests = 6 requests burst max.
 // Capacity of 8 allows the burst, refill keeps steady-state rate safe.
 const TOKEN_BUCKET_CAPACITY = parseInt(process.env.SCRAPER_BUCKET_CAPACITY || "8");
-const TOKEN_REFILL_RATE_MS = parseInt(process.env.SCRAPER_REFILL_MS || "3000"); // 1 token per 3s
-const MIN_REQUEST_INTERVAL_MS = parseInt(process.env.SCRAPER_MIN_INTERVAL_MS || "1200");
+const TOKEN_REFILL_RATE_MS = parseInt(process.env.SCRAPER_REFILL_MS || "2000"); // 1 token per 2s
+const MIN_REQUEST_INTERVAL_MS = parseInt(process.env.SCRAPER_MIN_INTERVAL_MS || "800");
 
 const sessions: Map<string, SessionState> = new Map();
 
@@ -271,10 +271,10 @@ function delay(ms: number): Promise<void> {
 
 /** Human-like random delay: base ± jitter, with occasional longer pauses. */
 function humanDelay(baseMs: number, jitterMs: number): Promise<void> {
-  // 10% chance of a longer "thinking" pause
-  const extra = Math.random() < 0.10 ? 2000 + Math.random() * 3000 : 0;
+  // 5% chance of a longer "thinking" pause
+  const extra = Math.random() < 0.05 ? 1000 + Math.random() * 2000 : 0;
   const ms = baseMs + (Math.random() * 2 - 1) * jitterMs + extra;
-  return delay(Math.max(500, ms));
+  return delay(Math.max(300, ms));
 }
 
 // ============================================================
@@ -375,7 +375,7 @@ async function warmUpSession(marketplace: string): Promise<void> {
     session.lastRequestTime = Date.now();
 
     // Small pause after homepage visit
-    await humanDelay(1500, 800);
+    await humanDelay(800, 400);
   } catch {
     // Non-fatal: we can still try product pages without warm-up
     console.warn(`[Scraper] Failed to warm up session for ${marketplace}`);
@@ -1204,9 +1204,9 @@ export async function scrapeProducts(
     const batchEnd = Math.min(batchStart + BATCH_SIZE, asins.length);
     const batchAsins = asins.slice(batchStart, batchEnd);
 
-    // Staggered start within batch: 0ms, 900ms, 1800ms
+    // Staggered start within batch: 0ms, 600ms, 1200ms
     const batchPromises = batchAsins.map(async (asin, idx) => {
-      if (idx > 0) await delay(idx * 900 + Math.random() * 400);
+      if (idx > 0) await delay(idx * 600 + Math.random() * 300);
       return scrapeProduct(asin.trim(), marketplace);
     });
 
@@ -1220,7 +1220,7 @@ export async function scrapeProducts(
     }
 
     if (batchEnd < asins.length) {
-      await humanDelay(2500, 1000);
+      await humanDelay(1200, 600);
     }
   }
 

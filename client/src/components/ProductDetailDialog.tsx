@@ -6,7 +6,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -243,7 +242,7 @@ export default function ProductDetailDialog({ product, open, onOpenChange }: Pro
             </div>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="px-6 py-4 space-y-6">
               {/* Product Images */}
               {allImages.length > 0 && (
@@ -486,7 +485,7 @@ export default function ProductDetailDialog({ product, open, onOpenChange }: Pro
                 </>
               )}
             </div>
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
 
