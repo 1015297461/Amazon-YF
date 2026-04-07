@@ -14,19 +14,19 @@ import {
   Star,
   Package,
   Tag,
-  ShoppingCart,
   List,
   FileText,
   Image as ImageIcon,
-  Info,
   TrendingUp,
   MessageSquare,
-  Images,
   ChevronLeft,
   ChevronRight,
   X,
   ZoomIn,
+  Download,
+  Layers,
 } from "lucide-react";
+import { toast } from "sonner";
 
 export interface ProductData {
   asin: string;
@@ -42,11 +42,11 @@ export interface ProductData {
   description: string | null;
   mainImage: string | null;
   images: string[];
+  aplusImages?: string[];
   specifications: Record<string, string>;
   productDetails: Record<string, string>;
   categories: string | null;
   seller: string | null;
-  // BSR fields
   bestSellerRank?: {
     mainCategory: string | null;
     mainRank: number | null;
@@ -54,7 +54,6 @@ export interface ProductData {
     subRank: number | null;
     rawText: string | null;
   };
-  // Customer reviews
   customerReviews?: {
     customersSay: string | null;
     reviewImages: string[];
@@ -72,18 +71,14 @@ interface Props {
 
 /**
  * Convert Amazon thumbnail URL to high-resolution URL.
- * Removes size suffixes like ._SX300_, ._SY88_, ._AC_SX679_, etc.
- * and replaces with ._SL1500_. for the highest available resolution.
  */
 function toHighRes(url: string): string {
   if (!url) return url;
-  // Replace ._SX/SY/AC/UL/SS/CR/etc. size codes with ._SL1500_.
   return url.replace(/\._[A-Z0-9_,]+_\./i, "._SL1500_.");
 }
 
 // ============================================================
-// Lightbox component - full-screen image viewer with navigation
-// Only closes the lightbox, NOT the parent detail dialog
+// Lightbox component
 // ============================================================
 interface LightboxProps {
   images: string[];
@@ -102,17 +97,16 @@ function Lightbox({ images, initialIndex, onClose }: LightboxProps) {
     setCurrent(i => (i + 1) % images.length);
   }, [images.length]);
 
-  // Keyboard navigation - ESC only closes lightbox, not parent dialog
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        e.stopPropagation(); // Prevent event from bubbling to parent dialog
+        e.stopPropagation();
         onClose();
       }
       if (e.key === "ArrowLeft") prev();
       if (e.key === "ArrowRight") next();
     };
-    window.addEventListener("keydown", handler, true); // Use capture phase
+    window.addEventListener("keydown", handler, true);
     return () => window.removeEventListener("keydown", handler, true);
   }, [onClose, prev, next]);
 
@@ -121,7 +115,6 @@ function Lightbox({ images, initialIndex, onClose }: LightboxProps) {
       className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center"
       onClick={onClose}
     >
-      {/* Close button */}
       <button
         className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
         onClick={onClose}
@@ -130,12 +123,10 @@ function Lightbox({ images, initialIndex, onClose }: LightboxProps) {
         <X className="w-6 h-6" />
       </button>
 
-      {/* Image counter */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full bg-black/60 text-white text-sm">
         {current + 1} / {images.length}
       </div>
 
-      {/* Left arrow */}
       {images.length > 1 && (
         <button
           className="absolute left-4 z-10 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors"
@@ -146,7 +137,6 @@ function Lightbox({ images, initialIndex, onClose }: LightboxProps) {
         </button>
       )}
 
-      {/* Main image */}
       <div
         className="max-w-[85vw] max-h-[85vh] flex items-center justify-center"
         onClick={e => e.stopPropagation()}
@@ -160,7 +150,6 @@ function Lightbox({ images, initialIndex, onClose }: LightboxProps) {
         />
       </div>
 
-      {/* Right arrow */}
       {images.length > 1 && (
         <button
           className="absolute right-4 z-10 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors"
@@ -171,7 +160,6 @@ function Lightbox({ images, initialIndex, onClose }: LightboxProps) {
         </button>
       )}
 
-      {/* Thumbnail strip */}
       {images.length > 1 && (
         <div
           className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 max-w-[80vw] overflow-x-auto py-2 px-3 bg-black/50 rounded-xl"
@@ -199,19 +187,76 @@ function Lightbox({ images, initialIndex, onClose }: LightboxProps) {
 }
 
 // ============================================================
+// Image download helper via server proxy
+// ============================================================
+async function downloadImagesViaProxy(images: string[], asin: string, category: string) {
+  if (images.length === 0) {
+    toast.error("没有可导出的图片");
+    return;
+  }
+  toast.info(`开始下载 ${images.length} 张${category}...`);
+  let success = 0;
+  for (let i = 0; i < images.length; i++) {
+    const img = images[i];
+    try {
+      const res = await fetch(`/api/image-proxy?url=${encodeURIComponent(toHighRes(img))}`);
+      if (!res.ok) throw new Error("fetch failed");
+      const blob = await res.blob();
+      const ext = blob.type.includes("png") ? "png" : "jpg";
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${asin}_${category}_${i + 1}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      success++;
+      // Small delay between downloads
+      await new Promise(r => setTimeout(r, 400));
+    } catch {
+      console.warn("Failed to download image:", img);
+    }
+  }
+  if (success > 0) {
+    toast.success(`已下载 ${success} 张${category}`);
+  } else {
+    toast.error("图片下载失败，请检查网络连接");
+  }
+}
+
+// ============================================================
+// Keys to filter from productDetails / specifications
+// (these values are already shown separately in the UI)
+// ============================================================
+const REVIEW_RELATED_KEYS = /customer.?review|number.?of.?review|rating|评分|评论/i;
+
+// ============================================================
 // Main ProductDetailDialog
 // ============================================================
 export default function ProductDetailDialog({ product, open, onOpenChange }: Props) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
   if (!product) return null;
 
   const bsr = product.bestSellerRank;
   const cr = product.customerReviews;
-  const allImages = [product.mainImage, ...product.images].filter((img): img is string => img !== null && img !== undefined);
+  const aplusImages = product.aplusImages ?? [];
+  const productImages = [product.mainImage, ...product.images].filter((img): img is string => !!img);
+  const reviewImages = (cr?.reviewImages ?? []).filter((img): img is string => !!img);
 
-  const openLightbox = (index: number) => {
+  // Filter productDetails/specifications to avoid duplicate info
+  const filteredProductDetails = Object.fromEntries(
+    Object.entries(product.productDetails).filter(([k]) => !REVIEW_RELATED_KEYS.test(k))
+  );
+  const filteredSpecifications = Object.fromEntries(
+    Object.entries(product.specifications).filter(([k]) => !REVIEW_RELATED_KEYS.test(k))
+  );
+
+  const openLightbox = (images: string[], index: number) => {
+    setLightboxImages(images);
     setLightboxIndex(index);
     setLightboxOpen(true);
   };
@@ -220,10 +265,11 @@ export default function ProductDetailDialog({ product, open, onOpenChange }: Pro
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl max-h-[90vh] bg-card border-border/50 p-0 flex flex-col">
+          {/* Header */}
           <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/30">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
-                <DialogTitle className="text-lg font-bold line-clamp-2 text-foreground">
+                <DialogTitle className="text-lg font-bold text-foreground leading-snug">
                   {product.title || "未获取标题"}
                 </DialogTitle>
                 <p className="text-xs text-muted-foreground mt-1">ASIN: {product.asin}</p>
@@ -242,29 +288,43 @@ export default function ProductDetailDialog({ product, open, onOpenChange }: Pro
             </div>
           </DialogHeader>
 
+          {/* Scrollable content */}
           <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="px-6 py-4 space-y-6">
-              {/* Product Images */}
-              {allImages.length > 0 && (
+
+              {/* ── 产品图片 ── */}
+              {productImages.length > 0 && (
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-amazon" />
-                    产品图片
-                  </h3>
-                  <div className="grid grid-cols-4 gap-3">
-                    {allImages.map((img, idx) => (
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4 text-amazon" />
+                      产品图片
+                      <span className="text-xs text-muted-foreground font-normal">({productImages.length} 张)</span>
+                    </h3>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 h-7 text-xs"
+                      onClick={() => downloadImagesViaProxy(productImages, product.asin, "产品图片")}
+                    >
+                      <Download className="w-3 h-3" />
+                      导出
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-5 gap-2">
+                    {productImages.map((img, idx) => (
                       <div
                         key={idx}
                         className="aspect-square rounded-lg overflow-hidden bg-muted border border-border/30 cursor-pointer hover:border-amazon/50 transition-all group relative"
-                        onClick={() => openLightbox(idx)}
+                        onClick={() => openLightbox(productImages, idx)}
                       >
                         <img
-                          src={toHighRes(img)}
+                          src={img}
                           alt={`Product ${idx + 1}`}
-                          className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform"
+                          className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform"
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center transition-colors">
-                          <ZoomIn className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <ZoomIn className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
                       </div>
                     ))}
@@ -272,7 +332,7 @@ export default function ProductDetailDialog({ product, open, onOpenChange }: Pro
                 </div>
               )}
 
-              {/* Basic Info */}
+              {/* ── 基本信息 ── */}
               <div className="grid grid-cols-2 gap-4">
                 {product.brand && (
                   <div>
@@ -292,18 +352,33 @@ export default function ProductDetailDialog({ product, open, onOpenChange }: Pro
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">{product.rating}</span>
                       <Star className="w-4 h-4 fill-amazon text-amazon" />
+                      {product.reviewCount && (
+                        <span className="text-xs text-muted-foreground">({product.reviewCount})</span>
+                      )}
                     </div>
                   </div>
                 )}
-                {product.reviewCount && (
+                {!product.rating && product.reviewCount && (
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">评论数</p>
                     <p className="text-sm font-medium">{product.reviewCount}</p>
                   </div>
                 )}
+                {product.availability && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">库存状态</p>
+                    <p className="text-sm font-medium">{product.availability}</p>
+                  </div>
+                )}
+                {product.seller && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">卖家</p>
+                    <p className="text-sm font-medium">{product.seller}</p>
+                  </div>
+                )}
               </div>
 
-              {/* BSR Info */}
+              {/* ── 销售排名 ── */}
               {(bsr?.mainCategory || bsr?.subCategory) && (
                 <>
                   <Separator className="bg-border/30" />
@@ -346,7 +421,7 @@ export default function ProductDetailDialog({ product, open, onOpenChange }: Pro
                 </>
               )}
 
-              {/* Bullet Points */}
+              {/* ── 五点描述 ── */}
               {product.bulletPoints.length > 0 && (
                 <>
                   <Separator className="bg-border/30" />
@@ -367,7 +442,7 @@ export default function ProductDetailDialog({ product, open, onOpenChange }: Pro
                 </>
               )}
 
-              {/* Description */}
+              {/* ── 产品描述 ── */}
               {product.description && (
                 <>
                   <Separator className="bg-border/30" />
@@ -383,68 +458,144 @@ export default function ProductDetailDialog({ product, open, onOpenChange }: Pro
                 </>
               )}
 
-              {/* Customer Reviews */}
-              {(cr?.customersSay || cr?.reviewImages?.length || cr?.selectToLearnMore?.length) && (
-                <>
-                  <Separator className="bg-border/30" />
-                  <div className="space-y-4">
+              {/* ── A+ 内容图片 ── */}
+              <>
+                <Separator className="bg-border/30" />
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-amazon" />
-                      Customer Reviews
+                      <Layers className="w-4 h-4 text-amazon" />
+                      A+ 内容图片
+                      {aplusImages.length > 0 && (
+                        <span className="text-xs text-muted-foreground font-normal">({aplusImages.length} 张)</span>
+                      )}
                     </h3>
-
-                    {/* Customers Say */}
-                    {cr?.customersSay && (
-                      <div className="p-3 rounded-lg bg-muted/50 border border-border/30">
-                        <p className="text-xs text-muted-foreground mb-2 font-medium">Customers say</p>
-                        <p className="text-sm text-foreground/90">{cr.customersSay}</p>
-                      </div>
-                    )}
-
-                    {/* Review Images */}
-                    {cr?.reviewImages && cr.reviewImages.length > 0 && (
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-2 font-medium">Reviews with images (前10张)</p>
-                        <div className="grid grid-cols-5 gap-2">
-                          {cr.reviewImages.slice(0, 10).map((img, idx) => (
-                            <div
-                              key={idx}
-                              className="aspect-square rounded-md overflow-hidden bg-muted border border-border/30 cursor-pointer hover:border-amazon/50 transition-all group relative"
-                              onClick={() => openLightbox(allImages.length + idx)}
-                            >
-                              <img
-                                src={toHighRes(img)}
-                                alt={`Review ${idx + 1}`}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                              />
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center transition-colors">
-                                <ZoomIn className="w-3 h-3 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Select to Learn More */}
-                    {cr?.selectToLearnMore && cr.selectToLearnMore.length > 0 && (
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-2 font-medium">Select to learn more</p>
-                        <div className="flex flex-wrap gap-2">
-                          {cr.selectToLearnMore.map((tag, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
+                    {aplusImages.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 h-7 text-xs"
+                        onClick={() => downloadImagesViaProxy(aplusImages, product.asin, "A+图片")}
+                      >
+                        <Download className="w-3 h-3" />
+                        导出
+                      </Button>
                     )}
                   </div>
-                </>
-              )}
+                  {aplusImages.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-3">
+                      {aplusImages.map((img, idx) => (
+                        <div
+                          key={idx}
+                          className="rounded-lg overflow-hidden bg-muted border border-border/30 cursor-pointer hover:border-amazon/50 transition-all group relative"
+                          onClick={() => openLightbox(aplusImages, idx)}
+                        >
+                          <img
+                            src={img}
+                            alt={`A+ ${idx + 1}`}
+                            className="w-full object-contain group-hover:opacity-90 transition-opacity"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 flex items-center justify-center transition-colors">
+                            <ZoomIn className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">该商品暂无 A+ 内容图片</p>
+                  )}
+                </div>
+              </>
 
-              {/* Specifications */}
-              {Object.keys(product.specifications).length > 0 && (
+              {/* ── 顾客评价 ── */}
+              <>
+                <Separator className="bg-border/30" />
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4 text-amazon" />
+                      顾客评价
+                    </h3>
+                    {reviewImages.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 h-7 text-xs"
+                        onClick={() => downloadImagesViaProxy(reviewImages, product.asin, "评论图片")}
+                      >
+                        <Download className="w-3 h-3" />
+                        导出图片
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Customers say */}
+                  {cr?.customersSay ? (
+                    <div className="p-3 rounded-lg bg-muted/50 border border-border/30">
+                      <p className="text-xs text-muted-foreground mb-2 font-medium">Customers say</p>
+                      <p className="text-sm text-foreground/90 leading-relaxed">{cr.customersSay}</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">暂无顾客评价摘要</p>
+                  )}
+
+                  {/* Select to learn more */}
+                  {cr?.selectToLearnMore && cr.selectToLearnMore.length > 0 && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-2 font-medium">Select to learn more</p>
+                      <div className="flex flex-wrap gap-2">
+                        {cr.selectToLearnMore.map((tag, idx) => (
+                          <Badge key={idx} variant="secondary" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Customer photos and videos */}
+                  {reviewImages.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground font-medium">
+                          Customer photos and videos ({reviewImages.length} 张)
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 text-xs text-amazon hover:text-amazon/80 px-2"
+                          onClick={() => openLightbox(reviewImages, 0)}
+                        >
+                          查看全部
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-5 gap-2">
+                        {reviewImages.slice(0, 10).map((img, idx) => (
+                          <div
+                            key={idx}
+                            className="aspect-square rounded-md overflow-hidden bg-muted border border-border/30 cursor-pointer hover:border-amazon/50 transition-all group relative"
+                            onClick={() => openLightbox(reviewImages, idx)}
+                          >
+                            <img
+                              src={img}
+                              alt={`Review ${idx + 1}`}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center transition-colors">
+                              <ZoomIn className="w-3 h-3 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">暂无顾客图片</p>
+                  )}
+                </div>
+              </>
+
+              {/* ── 产品规格 ── */}
+              {Object.keys(filteredSpecifications).length > 0 && (
                 <>
                   <Separator className="bg-border/30" />
                   <div className="space-y-3">
@@ -453,7 +604,7 @@ export default function ProductDetailDialog({ product, open, onOpenChange }: Pro
                       产品规格
                     </h3>
                     <div className="space-y-2">
-                      {Object.entries(product.specifications).map(([key, value]) => (
+                      {Object.entries(filteredSpecifications).map(([key, value]) => (
                         <div key={key} className="grid grid-cols-3 gap-4 text-sm border-b border-border/20 pb-2 last:border-0">
                           <span className="text-muted-foreground font-medium">{key}</span>
                           <span className="col-span-2 text-foreground/90">{value}</span>
@@ -464,8 +615,8 @@ export default function ProductDetailDialog({ product, open, onOpenChange }: Pro
                 </>
               )}
 
-              {/* Product Details */}
-              {Object.keys(product.productDetails).length > 0 && (
+              {/* ── 产品详情 ── */}
+              {Object.keys(filteredProductDetails).length > 0 && (
                 <>
                   <Separator className="bg-border/30" />
                   <div className="space-y-3">
@@ -474,7 +625,7 @@ export default function ProductDetailDialog({ product, open, onOpenChange }: Pro
                       产品详情
                     </h3>
                     <div className="space-y-2">
-                      {Object.entries(product.productDetails).map(([key, value]) => (
+                      {Object.entries(filteredProductDetails).map(([key, value]) => (
                         <div key={key} className="grid grid-cols-3 gap-4 text-sm border-b border-border/20 pb-2 last:border-0">
                           <span className="text-muted-foreground font-medium">{key}</span>
                           <span className="col-span-2 text-foreground/90">{value}</span>
@@ -484,15 +635,15 @@ export default function ProductDetailDialog({ product, open, onOpenChange }: Pro
                   </div>
                 </>
               )}
+
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Lightbox - only closes itself, not parent dialog */}
       {lightboxOpen && (
         <Lightbox
-          images={[...allImages, ...(cr?.reviewImages?.filter((img): img is string => img !== null && img !== undefined) || [])]}
+          images={lightboxImages}
           initialIndex={lightboxIndex}
           onClose={() => setLightboxOpen(false)}
         />

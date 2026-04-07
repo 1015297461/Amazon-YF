@@ -67,6 +67,8 @@ export const products = mysqlTable("products", {
   bsrSubCategory: varchar("bsrSubCategory", { length: 500 }),
   bsrSubRank: int("bsrSubRank"),
   bsrRawText: text("bsrRawText"),
+  // A+ Content
+  aplusImages: json("aplusImages"),       // array of A+ image URLs
   // Customer Reviews
   customersSay: text("customersSay"),
   reviewImages: json("reviewImages"),     // array of image URLs (up to 10)

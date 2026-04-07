@@ -6,7 +6,8 @@
       "Bash(node_modules/.bin/tsc --noEmit)",
       "Bash(/Users/dihting/Library/pnpm/pnpm run:*)",
       "Read(//Users/dihting/Library/**)",
-      "Read(//Users/dihting/.local/share/**)"
+      "Read(//Users/dihting/.local/share/**)",
+      "Bash(npx --no pnpm run check)"
     ]
   }
 }

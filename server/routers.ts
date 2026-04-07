@@ -157,6 +157,7 @@ export const appRouter = router({
           description: p.description,
           mainImage: p.mainImage,
           images: p.images,
+          aplusImages: p.aplusImages,
           specifications: p.specifications,
           productDetails: p.productDetails,
           categories: p.categories,

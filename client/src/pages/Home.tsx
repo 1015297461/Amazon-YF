@@ -639,24 +639,13 @@ export default function Home() {
                                 <td className="px-3 py-3 text-muted-foreground text-xs">{globalIndex + 1}</td>
                                 <td className="px-3 py-3">
                                   {product.mainImage ? (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <img
-                                          src={product.mainImage}
-                                          alt=""
-                                          className="w-16 h-16 object-contain rounded bg-white p-0.5 cursor-pointer hover:scale-110 transition-transform"
-                                        />
-                                      </TooltipTrigger>
-                                      <TooltipContent className="p-0 border-0 bg-transparent">
-                                        <img
-                                          src={product.mainImage}
-                                          alt=""
-                                          className="w-32 h-32 object-contain rounded bg-white p-1"
-                                        />
-                                      </TooltipContent>
-                                    </Tooltip>
+                                    <img
+                                      src={product.mainImage}
+                                      alt=""
+                                      className="w-14 h-14 object-contain rounded bg-white p-0.5"
+                                    />
                                   ) : (
-                                    <div className="w-16 h-16 rounded bg-muted/30 flex items-center justify-center">
+                                    <div className="w-14 h-14 rounded bg-muted/30 flex items-center justify-center">
                                       <ImageIcon className="w-5 h-5 text-muted-foreground/30" />
                                     </div>
                                   )}

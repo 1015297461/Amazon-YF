@@ -512,6 +512,7 @@ export interface ScrapedProduct {
   description: string | null;
   mainImage: string | null;
   images: string[];
+  aplusImages: string[];             // A+ content images
   specifications: Record<string, string>;
   productDetails: Record<string, string>;
   categories: string | null;         // breadcrumb path e.g. "Home & Kitchen > ..."
@@ -942,6 +943,65 @@ function parseProductPage(html: string, asin: string, marketplace: string): Scra
     });
   }
 
+  // ============================================================
+  // A+ Content Images
+  // ============================================================
+  const aplusImageSet = new Set<string>();
+
+  const aplusSelectors = [
+    "#aplus img",
+    "#aplus3p_feature_div img",
+    "#aplusProductDescription_feature_div img",
+    "#dpx-aplus-product-description_feature_div img",
+    ".aplus-v2 img",
+  ];
+
+  for (const sel of aplusSelectors) {
+    $(sel).each((_, el) => {
+      const src = $(el).attr("src") || $(el).attr("data-src") || $(el).attr("data-old-hires") || "";
+      if (
+        src &&
+        src.startsWith("http") &&
+        !src.includes("transparent") &&
+        !src.includes("sprite") &&
+        !src.includes("amazon-logo") &&
+        src.includes("amazon")
+      ) {
+        const hiRes = src.replace(/\._[A-Z0-9_,]+_\./i, "._SL1500_.");
+        aplusImageSet.add(hiRes);
+      }
+    });
+  }
+
+  // Also extract A+ images from noscript fallbacks
+  $("#aplus noscript, #aplus3p_feature_div noscript").each((_, el) => {
+    const noscriptHtml = $(el).html() || "";
+    const imgSrcRegex = /src="(https:\/\/[^"]+)"/g;
+    let m: RegExpExecArray | null;
+    while ((m = imgSrcRegex.exec(noscriptHtml)) !== null) {
+      const src = m[1];
+      if (src && !src.includes("transparent") && !src.includes("sprite") && src.includes("amazon")) {
+        const hiRes = src.replace(/\._[A-Z0-9_,]+_\./i, "._SL1500_.");
+        aplusImageSet.add(hiRes);
+      }
+    }
+  });
+
+  // Also extract from script content (A+ images sometimes embedded in JSON)
+  const aplusJsonRegex = /"aplus[^"]*"\s*:\s*\{[^}]*"src"\s*:\s*"(https:\/\/[^"]+)"/g;
+  let aplusMatch: RegExpExecArray | null;
+  while ((aplusMatch = aplusJsonRegex.exec(scriptContent)) !== null) {
+    const src = aplusMatch[1];
+    if (src && src.includes("amazon") && !src.includes("sprite")) {
+      const hiRes = src.replace(/\._[A-Z0-9_,]+_\./i, "._SL1500_.");
+      aplusImageSet.add(hiRes);
+    }
+  }
+
+  // Remove any A+ images that are already in the main images array to avoid duplicates
+  const mainImageUrls = new Set([mainImage, ...images].filter(Boolean));
+  const aplusImages = Array.from(aplusImageSet).filter(img => !mainImageUrls.has(img));
+
   return {
     asin,
     marketplace,
@@ -956,6 +1016,7 @@ function parseProductPage(html: string, asin: string, marketplace: string): Scra
     description,
     mainImage,
     images,
+    aplusImages,
     specifications,
     productDetails,
     categories,
@@ -1172,6 +1233,7 @@ export async function scrapeProduct(asin: string, marketplace: string): Promise<
       description: null,
       mainImage: null,
       images: [],
+      aplusImages: [],
       specifications: {},
       productDetails: {},
       categories: null,

@@ -50,6 +50,7 @@ function dbProductToProductData(p: any): ProductData {
     description: p.description,
     mainImage: p.mainImage,
     images: Array.isArray(p.images) ? p.images : [],
+    aplusImages: Array.isArray(p.aplusImages) ? p.aplusImages : [],
     specifications: (p.specifications && typeof p.specifications === "object") ? p.specifications : {},
     productDetails: (p.productDetails && typeof p.productDetails === "object") ? p.productDetails : {},
     categories: p.categories,
